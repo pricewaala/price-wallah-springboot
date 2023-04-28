@@ -4,23 +4,16 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
-import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
 
 @RestController
 public class MobileSearchController {
@@ -30,58 +23,97 @@ public class MobileSearchController {
         return new RestTemplate();
     }
 
-    private static final String API_URL = "http://20.100.169.29:8000/v12/amazon/%s?page=%d&page_size=%d";
-    private static final String PRODUCT_DATA_API_URL = "http://20.100.169.29:8000/product-data";
-
 
     private final RestTemplate restTemplate = new RestTemplate();
 
-//    @GetMapping("/amazon/{search_query}")
-//    public List<ProductData> searchAmazonProducts(@PathVariable String search_query,
-//                                                  @RequestParam(defaultValue = "1") int page,
-//                                                  @RequestParam(defaultValue = "5") int page_size) {
-//        String url = String.format(API_URL, search_query, page, page_size);
-//        ResponseEntity<List<String>> response = restTemplate.exchange(url, HttpMethod.GET, null, new ParameterizedTypeReference<List<String>>() {});
-//        List<String>listOfUrl=response.getBody();
-//        System.out.println("size is "+listOfUrl.size());
-//
-//        List<CompletableFuture<ProductData>> futures = new ArrayList<>();
-//        for(String link : listOfUrl){
-//            CompletableFuture<ProductData> future = CompletableFuture.supplyAsync(() -> callProductDataApi(link));
-//            futures.add(future);
-//        }
-//
-//        return futures.stream().map(CompletableFuture::join).collect(Collectors.toList());
-//    }
-//
-//    private ProductData callProductDataApi(String link) {
-//        RestTemplate restTemplate = new RestTemplate();
-//        ProductDataRequest request = new ProductDataRequest(link);
-//        return restTemplate.postForObject(PRODUCT_DATA_API_URL, request, String.class);
-//    }
-
-    @GetMapping("/scrape")
-    public String scrapeWebsite(@RequestParam("url") String url) throws IOException {
-        Document doc = Jsoup.connect(url).get();
-        Elements elements = doc.select("a.a-link-normal.s-no-outline");
-        for (Element element : elements) {
-            Element aTag = element.getElementsByTag("a").first();
-            String hrefValue = aTag.attr("href");
-
-            Document document= Jsoup.connect("https://www.amazon.in/"+hrefValue).get();
-            Element elem = document.selectFirst("span.a-size-large product-title-word-break");
-            while (elem ==null){
-                 document= Jsoup.connect("https://www.amazon.in/"+hrefValue).get();
-                 elem = document.selectFirst("span.a-size-large product-title-word-break");
-
-                 if (elem !=null){
-                     System.out.println(elem);
-                 }
+    @GetMapping("/amazon/scrape/v1")
+    public List<AmazonProduct> scrapeWebsiteAmazon(@RequestParam("search") String search) throws IOException {
+        String link = "https://www.amazon.in/s?k="+search;
+        List<AmazonProduct> products = new ArrayList<>();
+        try {
+            // Get the HTML content of the web page
+            Document doc = Jsoup.connect(link).get();
+            while (doc == null) {
+                System.out.println("------------------------trying ------------------------------------");
+                doc = Jsoup.connect(link).get();
             }
-            System.out.println(elem);
+
+            Elements elements = doc.select("h2.a-size-mini.a-spacing-none.a-color-base.s-line-clamp-2");
+
+            // Print the text content of each h2 tag to the console
+            for (int i=0;i<elements.size();i++) {
+                String title = null,url = null,price = null,image=null;
+                AmazonProduct amazonProduct=new AmazonProduct();
+
+                Element href = elements.get(i).selectFirst("a");
+                title = href.text();
+
+                url = "https://www.amazon.in"+href.attr("href");
+
+                Elements elementPrice = doc.select("span.a-price-whole");
+//                for (Element element1 : elementPrice) {
+//                    System.out.println(price);
+                price = elementPrice.get(i).text();
+//                }
+
+                Elements elementImage = doc.select("div.a-section.aok-relative.s-image-fixed-height");
+//                for (Element element1 : elementImage) {
+                    Element img = elementImage.get(i).selectFirst("img");
+                    image = img.attr("src");
+//                }
+
+                AmazonProduct product = new AmazonProduct(title, url, price, image);
+                products.add(product);
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
         }
-        return null;
+        return products;
     }
+
+//    @GetMapping("/scrape")
+//    public String scrapeWebsite(@RequestParam("name") String name) throws IOException {
+//            String link = "https://www.amazon.in/s?k=iphone+14&crid=25DXNV78CDVV8&sprefix=iphone+1%2Caps%2C573&ref=nb_sb_noss_2";
+//            try {
+//                // Get the HTML content of the web page
+//                Document doc = Jsoup.connect(link).get();
+//                while (doc == null) {
+//                    System.out.println("------------------------trying ------------------------------------");
+//                    doc = Jsoup.connect(link).get();
+//                }
+//
+//                Elements elements = doc.select("h2.a-size-mini.a-spacing-none.a-color-base.s-line-clamp-2");
+//
+//
+//                int count = 0;
+//                // Print the text content of each h2 tag to the console
+//                for (Element element : elements) {
+//                    count++;
+//                    Element href = element.selectFirst("a");
+//                    String text = href.text();
+//                    String url = href.attr("href");
+//                    System.out.println(text + " - " + url);
+//                    System.out.println(element.text());
+//
+//                }
+//
+//                Elements elements1=doc.select("span.a-price-whole");
+//                for (Element element : elements1) {
+//                    System.out.println(element.text());
+//
+//                }
+//
+//                System.out.println("Abhinav" + count);
+//
+//
+//                // Print the HTML content to the console
+////            System.out.println(doc.html());
+//            } catch (IOException e) {
+//                e.printStackTrace();
+//            }
+//        return "success";
+//    }
 
 
 }

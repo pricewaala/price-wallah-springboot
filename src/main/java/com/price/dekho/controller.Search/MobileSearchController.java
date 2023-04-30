@@ -29,7 +29,7 @@ public class MobileSearchController {
     @GetMapping("/amazon/scrape/v1")
     public List<AmazonProduct> scrapeWebsiteAmazon(@RequestParam("search") String search) throws IOException {
         String link = "https://www.amazon.in/s?k="+search;
-        List<AmazonProduct> products = new ArrayList<>();
+        List<AmazonProduct> products = new ArrayList<>(1000);
         try {
             // Get the HTML content of the web page
             Document doc = Jsoup.connect(link).get();
@@ -51,19 +51,24 @@ public class MobileSearchController {
                 url = "https://www.amazon.in"+href.attr("href");
 
                 Elements elementPrice = doc.select("span.a-price-whole");
-//                for (Element element1 : elementPrice) {
-//                    System.out.println(price);
-                price = elementPrice.get(i).text();
-//                }
+                amazonProduct.setPrice(elementPrice.get(i).text());
+                int size=products.size();
+                products.add(amazonProduct);
 
                 Elements elementImage = doc.select("div.a-section.aok-relative.s-image-fixed-height");
-//                for (Element element1 : elementImage) {
+                if(i>=elementImage.size())
+                {
+                     Element img=elementImage.get(0).selectFirst("img");
+                    image = img.attr("src");
+                }
+                else {
                     Element img = elementImage.get(i).selectFirst("img");
                     image = img.attr("src");
-//                }
-
-                AmazonProduct product = new AmazonProduct(title, url, price, image);
-                products.add(product);
+                }
+                amazonProduct.setImage(image);
+                amazonProduct.setUrl(url);
+                amazonProduct.setTitle(title);
+                products.set(i,amazonProduct);
             }
 
         } catch (IOException e) {

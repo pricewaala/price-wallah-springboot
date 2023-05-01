@@ -8,8 +8,9 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class AmazonProduct {
-    public String title;
-    public String url;
-    public String price;
-    public String image;
+    private String title;
+    private String url;
+    private String price;
+    private String image;
+
 }

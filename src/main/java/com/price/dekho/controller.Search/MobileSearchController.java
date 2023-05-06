@@ -1,5 +1,8 @@
 package com.price.dekho.controller.Search;
 
+import org.apache.http.HttpEntity;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.util.EntityUtils;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -9,6 +12,13 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -28,15 +38,25 @@ public class MobileSearchController {
 
     @GetMapping("/amazon/scrape/v1")
     public List<AmazonProduct> scrapeWebsiteAmazon(@RequestParam("search") String search) throws IOException {
-        String link = "https://www.amazon.in/s?k="+search;
+        String formattedSearch = search.replace(" ", "+");
+        String link = "https://www.amazon.in/s?k=" + formattedSearch;
         List<AmazonProduct> products = new ArrayList<>(1000);
         try {
-            // Get the HTML content of the web page
-            Document doc = Jsoup.connect(link).get();
-            while (doc == null) {
-                System.out.println("------------------------trying ------------------------------------");
-                doc = Jsoup.connect(link).get();
+            // Create a HttpClient instance
+            CloseableHttpClient httpClient = HttpClients.createDefault();
+            HttpGet httpGet = new HttpGet(link);
+            // Execute the HTTP request and get the response
+            CloseableHttpResponse response = httpClient.execute(httpGet);
+            HttpEntity entity = response.getEntity();
+            // Parse the HTML response using jsoup
+            Document doc = Jsoup.parse(entity.getContent(), "UTF-8", link);
+            while (doc == null || doc.body() == null || doc.body().children().isEmpty()) {
+                doc = Jsoup.parse(entity.getContent(), "UTF-8", link);
             }
+            // Close the HttpClient and response
+            EntityUtils.consume(entity);
+            response.close();
+            httpClient.close();
 
             Elements elements = doc.select("h2.a-size-mini.a-spacing-none.a-color-base.s-line-clamp-2");
 
@@ -58,7 +78,7 @@ public class MobileSearchController {
                 Elements elementImage = doc.select("div.a-section.aok-relative.s-image-fixed-height");
                 if(i>=elementImage.size())
                 {
-                     Element img=elementImage.get(0).selectFirst("img");
+                    Element img=elementImage.get(0).selectFirst("img");
                     image = img.attr("src");
                 }
                 else {
@@ -76,49 +96,5 @@ public class MobileSearchController {
         }
         return products;
     }
-
-//    @GetMapping("/scrape")
-//    public String scrapeWebsite(@RequestParam("name") String name) throws IOException {
-//            String link = "https://www.amazon.in/s?k=iphone+14&crid=25DXNV78CDVV8&sprefix=iphone+1%2Caps%2C573&ref=nb_sb_noss_2";
-//            try {
-//                // Get the HTML content of the web page
-//                Document doc = Jsoup.connect(link).get();
-//                while (doc == null) {
-//                    System.out.println("------------------------trying ------------------------------------");
-//                    doc = Jsoup.connect(link).get();
-//                }
-//
-//                Elements elements = doc.select("h2.a-size-mini.a-spacing-none.a-color-base.s-line-clamp-2");
-//
-//
-//                int count = 0;
-//                // Print the text content of each h2 tag to the console
-//                for (Element element : elements) {
-//                    count++;
-//                    Element href = element.selectFirst("a");
-//                    String text = href.text();
-//                    String url = href.attr("href");
-//                    System.out.println(text + " - " + url);
-//                    System.out.println(element.text());
-//
-//                }
-//
-//                Elements elements1=doc.select("span.a-price-whole");
-//                for (Element element : elements1) {
-//                    System.out.println(element.text());
-//
-//                }
-//
-//                System.out.println("Abhinav" + count);
-//
-//
-//                // Print the HTML content to the console
-////            System.out.println(doc.html());
-//            } catch (IOException e) {
-//                e.printStackTrace();
-//            }
-//        return "success";
-//    }
-
 
 }

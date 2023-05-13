@@ -144,11 +144,21 @@ public class MobileSearchController {
         return products;
     }
 
+    //final okhttp
     @GetMapping("/amazon/scrape/v3")
     public List<AmazonProduct> scrapeWebsiteAmazonV3(@RequestParam("search") String search) throws IOException {
         String link = "https://www.amazon.in/s?k=" + search;
         List<AmazonProduct> products = new ArrayList<>(1000);
 
+        scrapAmazonWrapper(link, products);
+
+        while (products.isEmpty())
+            scrapAmazonWrapper(link,products);
+
+        return products;
+    }
+
+    private static void scrapAmazonWrapper(String link, List<AmazonProduct> products) {
         OkHttpClient client = new OkHttpClient();
 
         Request request = new Request.Builder()
@@ -163,80 +173,39 @@ public class MobileSearchController {
 
             Elements elements = doc.select("div.s-card-container.s-overflow-hidden.aok-relative.puis-wide-grid-style");
 
-//            System.out.println(elements);
             System.out.println(elements.size());
-            // Print the text content of each h2 tag to the console
+
             for (int i = 0; i < elements.size(); i++) {
-                String title = null, url = null, price = null, image = null;
                 AmazonProduct amazonProduct = new AmazonProduct();
 
                 Element spanName = elements.get(i).selectFirst("span.a-size-medium.a-color-base.a-text-normal");
-                System.out.println(spanName.text());
+                if (spanName !=null)
+                    amazonProduct.setTitle(spanName.text());
 
                 Element divPrice=elements.get(i).selectFirst("div.a-section.a-spacing-none.a-spacing-top-micro.s-price-instructions-style");
                 if (divPrice !=null){
-                    Element divHrefLink=elements.get(i).selectFirst("a.a-size-base.a-link-normal.s-underline-text");
-                    assert divHrefLink != null;
-                    System.out.println(divHrefLink.attr("href"));
-                    Element spanPrice=elements.get(i).selectFirst("span.a-price-whole");
-                    assert spanPrice != null;
-                    System.out.println(spanPrice.text());
+                    Element divHrefLink=divPrice.selectFirst("a.a-size-base.a-link-normal.s-underline-text");
+                    if (divHrefLink!=null)
+                        amazonProduct.setUrl("https://www.amazon.in"+divHrefLink.attr("href"));
+                    Element spanPrice=divPrice.selectFirst("span.a-price-whole");
+                    if (spanPrice !=null)
+                        amazonProduct.setPrice(spanPrice.text());
                 }
-//                assert href != null;
-//                Element href3=href.selectFirst("h2.a-size-mini.a-spacing-none.a-color-base.s-line-clamp-2");
+                Element divImage=elements.get(i).selectFirst("div.a-section.aok-relative.s-image-fixed-height");
+                if (divImage !=null) {
+                    Element img=divImage.selectFirst("img.s-image");
+                    if (img!=null)
+                     amazonProduct.setImage(img.attr("src"));
+                }
 
-//                System.out.println(href3);
-                // Your code for extracting the required data goes here
+                products.add(amazonProduct);
             }
+
+
         } catch (IOException e) {
             e.printStackTrace();
         }
-
-        return products;
     }
-
-//    @GetMapping("/scrape")
-//    public String scrapeWebsite(@RequestParam("name") String name) throws IOException {
-//            String link = "https://www.amazon.in/s?k=iphone+14&crid=25DXNV78CDVV8&sprefix=iphone+1%2Caps%2C573&ref=nb_sb_noss_2";
-//            try {
-//                // Get the HTML content of the web page
-//                Document doc = Jsoup.connect(link).get();
-//                while (doc == null) {
-//                    System.out.println("------------------------trying ------------------------------------");
-//                    doc = Jsoup.connect(link).get();
-//                }
-//
-//                Elements elements = doc.select("h2.a-size-mini.a-spacing-none.a-color-base.s-line-clamp-2");
-//
-//
-//                int count = 0;
-//                // Print the text content of each h2 tag to the console
-//                for (Element element : elements) {
-//                    count++;
-//                    Element href = element.selectFirst("a");
-//                    String text = href.text();
-//                    String url = href.attr("href");
-//                    System.out.println(text + " - " + url);
-//                    System.out.println(element.text());
-//
-//                }
-//
-//                Elements elements1=doc.select("span.a-price-whole");
-//                for (Element element : elements1) {
-//                    System.out.println(element.text());
-//
-//                }
-//
-//                System.out.println("Abhinav" + count);
-//
-//
-//                // Print the HTML content to the console
-////            System.out.println(doc.html());
-//            } catch (IOException e) {
-//                e.printStackTrace();
-//            }
-//        return "success";
-//    }
 
 
 }

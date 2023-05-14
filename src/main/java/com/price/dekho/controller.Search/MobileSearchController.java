@@ -342,5 +342,24 @@ public class MobileSearchController {
     }
 
 
+    @GetMapping("/compare-products")
+    public List<List<ProductDetail>> compareProducts(@RequestParam("search") String search) throws IOException {
+        List<List<ProductDetail>> comparedProducts = new ArrayList<>();
+
+        // Call the first API
+        List<ProductDetail> flipkartProducts = scrapeWebsiteFlipkart(search);
+        comparedProducts.add(flipkartProducts);
+
+        // Call the second API
+        List<ProductDetail> relianceProducts = scrapeWebsiteRelianceV3(search);
+        comparedProducts.add(relianceProducts);
+
+        // Call the third API
+        List<ProductDetail> amazonProducts = scrapeWebsiteAmazonV3(search);
+        comparedProducts.add(amazonProducts);
+
+        return comparedProducts;
+    }
+
 
 }

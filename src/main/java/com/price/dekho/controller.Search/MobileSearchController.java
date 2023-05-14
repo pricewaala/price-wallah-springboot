@@ -17,14 +17,10 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
 
-import java.io.BufferedReader;
 import java.io.IOException;
 import okhttp3.OkHttpClient;
-import java.io.InputStreamReader;
-import java.net.URL;
-import java.net.URLConnection;
+
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 @RestController
@@ -39,9 +35,9 @@ public class MobileSearchController {
     private final RestTemplate restTemplate = new RestTemplate();
 
     @GetMapping("/amazon/scrape/v1")
-    public List<AmazonProduct> scrapeWebsiteAmazon(@RequestParam("search") String search) throws IOException {
+    public List<ProductDetail> scrapeWebsiteAmazon(@RequestParam("search") String search) throws IOException {
         String link = "https://www.amazon.in/s?k="+search;
-        List<AmazonProduct> products = new ArrayList<>(1000);
+        List<ProductDetail> products = new ArrayList<>(1000);
         try {
             // Get the HTML content of the web page
             Document doc = Jsoup.connect(link).get();
@@ -55,7 +51,7 @@ public class MobileSearchController {
             // Print the text content of each h2 tag to the console
             for (int i=0;i<elements.size();i++) {
                 String title = null,url = null,price = null,image=null;
-                AmazonProduct amazonProduct=new AmazonProduct();
+                ProductDetail productDetail =new ProductDetail();
 
                 Element href = elements.get(i).selectFirst("a");
                 title = href.text();
@@ -63,9 +59,9 @@ public class MobileSearchController {
                 url = "https://www.amazon.in"+href.attr("href");
 
                 Elements elementPrice = doc.select("span.a-price-whole");
-                amazonProduct.setPrice(elementPrice.get(i).text());
+                productDetail.setPrice(elementPrice.get(i).text());
                 int size=products.size();
-                products.add(amazonProduct);
+                products.add(productDetail);
 
                 Elements elementImage = doc.select("div.a-section.aok-relative.s-image-fixed-height");
                 if(i>=elementImage.size())
@@ -77,10 +73,10 @@ public class MobileSearchController {
                     Element img = elementImage.get(i).selectFirst("img");
                     image = img.attr("src");
                 }
-                amazonProduct.setImage(image);
-                amazonProduct.setUrl(url);
-                amazonProduct.setTitle(title);
-                products.set(i,amazonProduct);
+                productDetail.setImage(image);
+                productDetail.setUrl(url);
+                productDetail.setTitle(title);
+                products.set(i, productDetail);
             }
 
         } catch (IOException e) {
@@ -90,9 +86,9 @@ public class MobileSearchController {
     }
 
     @GetMapping("/amazon/scrape/v2")
-    public List<AmazonProduct> scrapeWebsiteAmazonV2(@RequestParam("search") String search) throws IOException {
+    public List<ProductDetail> scrapeWebsiteAmazonV2(@RequestParam("search") String search) throws IOException {
         String link = "https://www.amazon.in/s?k=" + search;
-        List<AmazonProduct> products = new ArrayList<>(1000);
+        List<ProductDetail> products = new ArrayList<>(1000);
 
         try (CloseableHttpClient httpClient = HttpClientBuilder.create().build()) {
             HttpGet request = new HttpGet(link);
@@ -109,7 +105,7 @@ public class MobileSearchController {
                 // Print the text content of each h2 tag to the console
                 for (int i = 0; i < elements.size(); i++) {
                     String title = null, url = null, price = null, image = null;
-                    AmazonProduct amazonProduct = new AmazonProduct();
+                    ProductDetail productDetail = new ProductDetail();
 
                     Element href = elements.get(i).selectFirst("div.sg-col-inner");
 
@@ -132,9 +128,9 @@ public class MobileSearchController {
 //                        Element img = elementImage.get(i).selectFirst("img");
 //                        image = img.attr("src");
 //                    }
-                    amazonProduct.setImage(image);
-                    amazonProduct.setUrl(url);
-                    amazonProduct.setTitle(title);
+                    productDetail.setImage(image);
+                    productDetail.setUrl(url);
+                    productDetail.setTitle(title);
 //                    products.set(i, amazonProduct);
                 }
             }
@@ -146,9 +142,9 @@ public class MobileSearchController {
 
     //final okhttp
     @GetMapping("/amazon/scrape/v3")
-    public List<AmazonProduct> scrapeWebsiteAmazonV3(@RequestParam("search") String search) throws IOException {
+    public List<ProductDetail> scrapeWebsiteAmazonV3(@RequestParam("search") String search) throws IOException {
         String link = "https://www.amazon.in/s?k=" + search;
-        List<AmazonProduct> products = new ArrayList<>(1000);
+        List<ProductDetail> products = new ArrayList<>(1000);
 
         scrapAmazonWrapper(link, products);
 
@@ -158,7 +154,7 @@ public class MobileSearchController {
         return products;
     }
 
-    private static void scrapAmazonWrapper(String link, List<AmazonProduct> products) {
+    private static void scrapAmazonWrapper(String link, List<ProductDetail> products) {
         OkHttpClient client = new OkHttpClient();
 
         Request request = new Request.Builder()
@@ -176,29 +172,29 @@ public class MobileSearchController {
             System.out.println(elements.size());
 
             for (int i = 0; i < elements.size(); i++) {
-                AmazonProduct amazonProduct = new AmazonProduct();
+                ProductDetail productDetail = new ProductDetail();
 
                 Element spanName = elements.get(i).selectFirst("span.a-size-medium.a-color-base.a-text-normal");
                 if (spanName !=null)
-                    amazonProduct.setTitle(spanName.text());
+                    productDetail.setTitle(spanName.text());
 
                 Element divPrice=elements.get(i).selectFirst("div.a-section.a-spacing-none.a-spacing-top-micro.s-price-instructions-style");
                 if (divPrice !=null){
                     Element divHrefLink=divPrice.selectFirst("a.a-size-base.a-link-normal.s-underline-text");
                     if (divHrefLink!=null)
-                        amazonProduct.setUrl("https://www.amazon.in"+divHrefLink.attr("href"));
+                        productDetail.setUrl("https://www.amazon.in"+divHrefLink.attr("href"));
                     Element spanPrice=divPrice.selectFirst("span.a-price-whole");
                     if (spanPrice !=null)
-                        amazonProduct.setPrice(spanPrice.text());
+                        productDetail.setPrice(spanPrice.text());
                 }
                 Element divImage=elements.get(i).selectFirst("div.a-section.aok-relative.s-image-fixed-height");
                 if (divImage !=null) {
                     Element img=divImage.selectFirst("img.s-image");
                     if (img!=null)
-                     amazonProduct.setImage(img.attr("src"));
+                     productDetail.setImage(img.attr("src"));
                 }
 
-                products.add(amazonProduct);
+                products.add(productDetail);
             }
 
 
@@ -209,9 +205,9 @@ public class MobileSearchController {
 
 
     @GetMapping("/reliance/scrape/v1")
-    public List<AmazonProduct> scrapeWebsiteRelianceV3(@RequestParam("search") String search) throws IOException {
+    public List<ProductDetail> scrapeWebsiteRelianceV3(@RequestParam("search") String search) throws IOException {
         String link = "https://www.reliancedigital.in/search?q=" + search;
-        List<AmazonProduct> products = new ArrayList<>(1000);
+        List<ProductDetail> products = new ArrayList<>(1000);
 
         scrapRelianceWrapper(link, products);
 
@@ -221,7 +217,7 @@ public class MobileSearchController {
         return products;
     }
 
-    private static void scrapRelianceWrapper(String link, List<AmazonProduct> products) {
+    private static void scrapRelianceWrapper(String link, List<ProductDetail> products) {
         OkHttpClient client = new OkHttpClient();
 
         Request request = new Request.Builder()
@@ -239,32 +235,32 @@ public class MobileSearchController {
             System.out.println(elements.size());
 
             for (int i = 0; i < elements.size(); i++) {
-                AmazonProduct amazonProduct = new AmazonProduct();
+                ProductDetail productDetail = new ProductDetail();
 
                 Element spanName = elements.get(i).selectFirst("p.sp__name");
                 if (spanName !=null)
-                    amazonProduct.setTitle(spanName.text());
+                    productDetail.setTitle(spanName.text());
 
                 Element divPrice=elements.get(i).selectFirst("div.slider-text");
                 if (divPrice !=null){
                     Element priceSpan=divPrice.selectFirst("span.TextWeb__Text-sc-1cyx778-0");
                     if (priceSpan !=null)
-                        amazonProduct.setPrice(priceSpan.text());
+                        productDetail.setPrice(priceSpan.text());
                 }
 
                 Element divLinkAndImage=elements.get(i).selectFirst("div.sp.grid");
                 if (divLinkAndImage != null){
                     Element hrefLink=divLinkAndImage.selectFirst("a");
                     if (hrefLink!=null)
-                        amazonProduct.setUrl("https://www.reliancedigital.in"+hrefLink.attr("href"));
+                        productDetail.setUrl("https://www.reliancedigital.in"+hrefLink.attr("href"));
 
                     Element imageLink=divLinkAndImage.selectFirst("img");
                     if (imageLink != null){
-                        amazonProduct.setImage("https://www.reliancedigital.in"+imageLink.attr("data-srcset"));
+                        productDetail.setImage("https://www.reliancedigital.in"+imageLink.attr("data-srcset"));
                     }
                 }
 
-                products.add(amazonProduct);
+                products.add(productDetail);
             }
 
 
@@ -275,9 +271,9 @@ public class MobileSearchController {
 
 
     @GetMapping("/flipkart/scrape/v1")
-    public List<AmazonProduct> scrapeWebsiteFlipkart(@RequestParam("search") String search) throws IOException {
+    public List<ProductDetail> scrapeWebsiteFlipkart(@RequestParam("search") String search) throws IOException {
         String link = "https://www.flipkart.com/search?q=" + search;
-        List<AmazonProduct> products = new ArrayList<>(1000);
+        List<ProductDetail> products = new ArrayList<>(1000);
 
         scrapFlipkartWrapper(link, products);
 
@@ -287,7 +283,7 @@ public class MobileSearchController {
         return products;
     }
 
-    private static void scrapFlipkartWrapper(String link, List<AmazonProduct> products) {
+    private static void scrapFlipkartWrapper(String link, List<ProductDetail> products) {
         OkHttpClient client = new OkHttpClient();
 
         Request request = new Request.Builder()
@@ -305,26 +301,26 @@ public class MobileSearchController {
             System.out.println(elements.size());
 
             for (int i = 0; i < elements.size(); i++) {
-                AmazonProduct amazonProduct = new AmazonProduct();
+                ProductDetail productDetail = new ProductDetail();
                 ArrayList<String>descriptionList=new ArrayList<>();
 
                 Element divName = elements.get(i).selectFirst("div._4rR01T");
                 if (divName !=null)
-                    amazonProduct.setTitle(divName.text());
+                    productDetail.setTitle(divName.text());
 
                 Element divPrice=elements.get(i).selectFirst("div._30jeq3._1_WHN1");
                 if (divPrice !=null){
-                        amazonProduct.setPrice(divPrice.text());
+                        productDetail.setPrice(divPrice.text());
                 }
 
                 Element imageSrc=elements.get(i).selectFirst("img._396cs4");
                 if (imageSrc !=null){
-                    amazonProduct.setImage(imageSrc.attr("src"));
+                    productDetail.setImage(imageSrc.attr("src"));
                 }
 
                 Element hrefLink=elements.get(i).selectFirst("a._1fQZEK");
                 if (hrefLink !=null){
-                    amazonProduct.setUrl("https://www.flipkart.com"+hrefLink.attr("href"));
+                    productDetail.setUrl("https://www.flipkart.com"+hrefLink.attr("href"));
                 }
 
                 Element description=elements.get(i).selectFirst("ul._1xgFaf");
@@ -333,10 +329,10 @@ public class MobileSearchController {
                     for (Element list: listOfDescriptions){
                         descriptionList.add(list.text());
                     }
-                    amazonProduct.setDescription(descriptionList);
+                    productDetail.setDescription(descriptionList);
                 }
 
-                products.add(amazonProduct);
+                products.add(productDetail);
             }
 
 

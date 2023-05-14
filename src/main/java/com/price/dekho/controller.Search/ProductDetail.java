@@ -9,7 +9,7 @@ import java.util.ArrayList;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class AmazonProduct {
+public class ProductDetail {
     private String title;
     private String url;
     private String price;
